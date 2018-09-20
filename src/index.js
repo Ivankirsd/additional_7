@@ -3,6 +3,7 @@ module.exports = function solveSudoku(matrix) {
   var solved = [];
   var steps = 0;
   var backtrackingsolved_call = 0;
+  var solvedArray = [];
 
   initSolved(matrix);
   solve();
@@ -23,21 +24,16 @@ module.exports = function solveSudoku(matrix) {
       }
   };
 
-
   function solve() {
       var changed = 0;
       do {
-          // сужаем множество значений для всех нерешенных чисел
           changed = updateSuggests();
           steps++;
           if ( 81 < steps ) {
-              // Зашита от цикла
               break;
           }
       } while (changed);
-
   };
-
 
   function updateSuggests() {
       var changed = 0;
@@ -51,13 +47,11 @@ module.exports = function solveSudoku(matrix) {
               }
 
               changed += solveSingle(i, j);
-
               changed += solveHiddenSingle(i, j);
           }
       }
       return changed;
   };
-
 
   function solveSingle(i, j) {
       solved[i][j][2] = arrayDiff(solved[i][j][2], rowContent(i));
@@ -65,11 +59,11 @@ module.exports = function solveSudoku(matrix) {
       solved[i][j][2] = arrayDiff(solved[i][j][2], sectContent(i, j));
       if ( 1 == solved[i][j][2].length ) {
           markSolved(i, j, solved[i][j][2][0]);
+          solved[i][j][2] = [];
           return 1;
       }
       return 0;
   };
-
 
   function solveHiddenSingle(i, j) {
       var less_suggest = lessRowSuggest(i, j);
@@ -91,12 +85,10 @@ module.exports = function solveSudoku(matrix) {
       return changed;
   };
 
-
   function markSolved(i, j, solve) {
       solved[i][j][0] = solve;
       solved[i][j][1] = 'solved';
-  }; // end of method markSolved()
-
+  };
 
   function rowContent(i) {
       var content = [];
@@ -131,7 +123,6 @@ module.exports = function solveSudoku(matrix) {
       return content;
   };
 
-
   function lessRowSuggest(i, j) {
       var less_suggest = solved[i][j][2];
       for ( var k=0; k<9; k++ ) {
@@ -140,9 +131,11 @@ module.exports = function solveSudoku(matrix) {
           }
           less_suggest = arrayDiff(less_suggest, solved[i][k][2]);
       }
+      if (less_suggest.length === 1) {
+        solved[i][j][2] = [];
+      }
       return less_suggest;
   };
-
 
   function lessColSuggest(i, j) {
       var less_suggest = solved[i][j][2];
@@ -151,6 +144,9 @@ module.exports = function solveSudoku(matrix) {
               continue;
           }
           less_suggest = arrayDiff(less_suggest, solved[k][j][2]);
+      }
+      if (less_suggest.length === 1) {
+        solved[i][j][2] = [];
       }
       return less_suggest;
   };
@@ -166,9 +162,11 @@ module.exports = function solveSudoku(matrix) {
               less_suggest = arrayDiff(less_suggest, solved[offset.i+k][offset.j+l][2]);
           }
       }
+      if (less_suggest.length === 1) {
+        solved[i][j][2] = [];
+      }
       return less_suggest;
   };
-
 
   function arrayDiff (ar1, ar2) {
       var arr_diff = [];
@@ -187,7 +185,6 @@ module.exports = function solveSudoku(matrix) {
       return arr_diff;
   };
 
-
   function arrayUnique(ar){
       var sorter = {};
       for(var i=0,j=ar.length;i<j;i++){
@@ -200,7 +197,6 @@ module.exports = function solveSudoku(matrix) {
       return ar;
   };
 
-
   function sectOffset(i, j) {
       return {
           j: Math.floor(j/3)*3,
@@ -208,22 +204,102 @@ module.exports = function solveSudoku(matrix) {
       };
   };
 
+  function solveHiddenPairs(i, j) {
+
+    solveHiddenPairsRow(i);
+    solveHiddenPairsCol(j);
+
+    return;
+  }
+
+  function solveHiddenPairsRow(i) {
+
+      for (var j = 0; j < 9; j++) {
+        for (var k = j+1; k < 9; k++) {
+          if (solved[i][j][2].length !== 2) {
+            continue;
+          } else if ( JSON.stringify(solved[i][j][2])==JSON.stringify(solved[i][k][2])) {
+              // console.log('pairRow: ',(solved[i][k][2]));
+
+              // console.log(newMatrix());
+              let newMatrix1 = newMatrix();
+              newMatrix1[i][j] = solved[i][j][2][0];
+              // solvedArray.push(newMatrix1);
+              let newMatrix2 =  newMatrix();
+              newMatrix2[i][j] = solved[i][j][2][1];
+              solvedArray.push(newMatrix2);
+              // console.log(newMatrix2);
+              return;
+          }
+        }
+      }
+    return 0;
+  }
+
+  function solveHiddenPairsCol(j) {
+
+    for (var i = 0; i < 9; i++) {
+      for (var g = i+1; g < 9; g++) {
+        if (solved[i][j][2].length !== 2) {
+          continue;
+        } else if ( JSON.stringify(solved[i][j][2])==JSON.stringify(solved[g][j][2])) {
+            let newMatrix1 = newMatrix();
+            newMatrix1[i][j] = solved[i][j][2][0];
+            let newMatrix2 =  newMatrix();
+            newMatrix2[i][j] = solved[i][j][2][1];
+            solvedArray.push(newMatrix2);
+            return;
+        }
+      }
+    }
+    return 0;
+  }
+
+  function newMatrix() {
+    var newMatrix = [];
+
+    for (var i = 0; i < 9; i++) {
+      newMatrix[i] = []
+      for (var j = 0; j < 9; j++) {
+          newMatrix[i][j] = solved[i][j][0];
+      }
+    }
+
+    return newMatrix;
+  }
 
   function setSolved(matrix) {
-    console.log(solved);
-    console.log();
+    var sudokuIsSolve = true;
+    // console.log(solved);
+    // console.log();
     for (var i = 0; i < matrix.length; i++) {
       for (var j = 0; j < matrix[i].length; j++) {
         if (!matrix[i][j]) {
           matrix[i][j] = solved[i][j][0];
         }
+        if (solved[i][j][0]) {
+          sudokuIsSolve = false;
+          solveHiddenPairs(i, j);
+
+        }
+        // if (solved[i][j][1] !== 'unknown') {
+        //   console.log(`solved[ ${i} ][ ${j} ]: `,solved[i][j][0]);
+        //
+        // } else {
+        //
+        //   matrix[i][j] = solved[i][j][2].toString();
+        //   console.log(`solved[ ${i} ][ ${j} ]: `,solved[i][j][2]);
+        // }
       }
+      // console.log();
     }
-    console.log(matrix);
-    return matrix;
+    // console.log('matrix: ',matrix);
+    // console.log();
+    // console.log('solvedArray: ',solvedArray);
+    if (solvedArray.length === 0) {
+      return matrix;
+    }
+    return sudokuIsSolve ? matrix : new solveSudoku(solvedArray.shift());
   }
-
       return setSolved(matrix);
-
-
 }
